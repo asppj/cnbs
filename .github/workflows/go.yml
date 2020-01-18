@@ -1,0 +1,60 @@
+name: Go
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - v1.*
+jobs:
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go 1.13
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.13
+        id: go
+
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v1
+
+      - name: Get dependencies
+        run: |
+          go get -v -t -d ./...
+          if [ -f Gopkg.toml ]; then
+              curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+              dep ensure
+          fi
+
+      - name: Build
+        run: go build -v .
+
+#  deploy:
+#    name: Deploy
+#    runs-on: ubuntu-latest
+#    needs: build
+#    steps:
+#      - name: Deploy to Staging server
+#        uses: webfactory/ssh-agent@v0.1.1
+#        with:
+#          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+#      - name: Setup knownhosts
+#        run: ssh-keyscan ${{ secrets.REMOTE_HOST}} >> ~/.ssh/known_hosts
+#      - name: Run SSH Command
+#        run: |
+#          ssh ${{ secrets.REMOTE_USER}}@${{ secrets.REMOTE_HOST}} "cd ${{secrets.DOCKER_COMPOSE_PATH}}
+#          pwd
+#          ls -al
+#          count=`docker ps |grep -v "project_github" |wc -l`
+#          echo "Process Count："
+#          echo ${count}
+#          if [ 0 == $count ]; then
+#              echo "Process Start："
+#              docker-compose up -d
+#          else
+#              echo "Process Restart"
+#              docker-compose restart
+#          fi
+#          echo `docker ps|grep project_github`"

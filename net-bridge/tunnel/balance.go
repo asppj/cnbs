@@ -2,7 +2,6 @@ package tunnel
 
 import (
 	"fmt"
-	"net"
 	"sync"
 
 	"github.com/gogf/gf/net/gtcp"
@@ -19,7 +18,8 @@ type BalanceHTTP struct {
 
 var _lockBHTTP sync.Mutex
 
-func (b *BalanceHTTP) Add(ident *auth.Identity, cc gtcp.PoolConn) error {
+// Add 新增连接
+func (b *BalanceHTTP) Add(ident *auth.Identity, cc *gtcp.Conn) error {
 	_lockBHTTP.Lock()
 	defer _lockBHTTP.Unlock()
 	if _, ok := b.BridgeConns[ident.AuthKey]; ok {
@@ -65,7 +65,7 @@ type BalanceTCP struct {
 }
 
 // Add 添加
-func (b *BalanceTCP) Add(ident *auth.Identity, cc net.Conn) error {
+func (b *BalanceTCP) Add(ident *auth.Identity, cc *gtcp.Conn) error {
 	_lockBHTTP.Lock()
 	defer _lockBHTTP.Unlock()
 	if _, ok := b.BridgeConns[ident.AuthKey]; ok {
@@ -82,7 +82,7 @@ type BalanceUDP struct {
 }
 
 // Add 添加
-func (b *BalanceUDP) Add(ident *auth.Identity, cc net.Conn) error {
+func (b *BalanceUDP) Add(ident *auth.Identity, cc *gtcp.Conn) error {
 	_lockBHTTP.Lock()
 	defer _lockBHTTP.Unlock()
 	if _, ok := b.BridgeConns[ident.AuthKey]; ok {

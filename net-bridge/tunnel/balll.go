@@ -1,21 +1,19 @@
 package tunnel
 
 import (
-	"net"
-
 	"github.com/gogf/gf/net/gtcp"
 
 	"github.com/asppj/cnbs/net-bridge/auth"
 )
 
-// http clients
+// HTTPConn clients
 type HTTPConn struct {
 	Identity   *auth.Identity
-	BridgeConn gtcp.PoolConn
+	BridgeConn *gtcp.Conn
 }
 
 // NewHTTPConn 新建
-func NewHTTPConn(ident *auth.Identity, cc gtcp.PoolConn) *HTTPConn {
+func NewHTTPConn(ident *auth.Identity, cc *gtcp.Conn) *HTTPConn {
 	return &HTTPConn{
 		Identity:   ident,
 		BridgeConn: cc,
@@ -25,11 +23,11 @@ func NewHTTPConn(ident *auth.Identity, cc gtcp.PoolConn) *HTTPConn {
 // TCPConn clients
 type TCPConn struct {
 	Identity   *auth.Identity
-	BridgeConn net.Conn
+	BridgeConn *gtcp.Conn
 }
 
 // NewTCPConn 新建
-func NewTCPConn(ident *auth.Identity, cc net.Conn) *TCPConn {
+func NewTCPConn(ident *auth.Identity, cc *gtcp.Conn) *TCPConn {
 	return &TCPConn{
 		Identity:   ident,
 		BridgeConn: cc,
@@ -39,11 +37,11 @@ func NewTCPConn(ident *auth.Identity, cc net.Conn) *TCPConn {
 // UDPConn clients
 type UDPConn struct {
 	Identity   *auth.Identity
-	BridgeConn net.Conn
+	BridgeConn *gtcp.Conn
 }
 
 // NewUDPConn 新建
-func NewUDPConn(ident *auth.Identity, cc net.Conn) *UDPConn {
+func NewUDPConn(ident *auth.Identity, cc *gtcp.Conn) *UDPConn {
 	return &UDPConn{
 		Identity:   ident,
 		BridgeConn: cc,

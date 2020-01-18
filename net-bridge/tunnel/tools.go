@@ -53,12 +53,13 @@ func authHTTPBridge(conn io.Reader) (key string, err error) {
 }
 
 // ReadHTTP 读取http
-func ReadHTTP(proxy io.ReadWriter, bridge gtcp.Conn) (recvByte, sendByte int, err error) {
+func ReadHTTP(proxy io.ReadWriter, bridge *gtcp.Conn) (recvByte, sendByte int, err error) {
 	buf := make([]byte, 1024)
 	for {
-		n, err := proxy.Read(buf)
-		if err == io.EOF {
+		n, readErr := proxy.Read(buf)
+		if readErr == io.EOF {
 			log.Info("proxy连接断开")
+			err = readErr
 			return
 		}
 		if err != nil {
@@ -66,8 +67,8 @@ func ReadHTTP(proxy io.ReadWriter, bridge gtcp.Conn) (recvByte, sendByte int, er
 		}
 		log.Info(string(buf[:n]))
 		recvByte += n
-		data, err := bridge.SendRecvPkg(buf[:n])
-		if err != nil {
+		data, recvErr := bridge.SendRecvPkg(buf[:n])
+		if recvErr != nil {
 			log.Info("bridge连接断开")
 			return
 		}

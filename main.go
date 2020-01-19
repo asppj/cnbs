@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/asppj/cnbs/log"
+	"github.com/asppj/cnbs/net-bridge/client"
 
 	"github.com/asppj/cnbs/net-bridge/server"
 )
@@ -12,13 +13,18 @@ const (
 	localIP = "127.0.0.1"
 )
 
-var s *server.Server
-
-func main() {
-	s = server.NewServer(localIP, cp, tp)
-	if err := s.Start(); err != nil {
+func newServer() {
+	s := server.NewServer()
+	if err := s.Run(); err != nil {
 		log.Error(err)
 		return
 	}
-	s.Wait()
+}
+
+func main() {
+	c := client.NewClient()
+	if err := c.Run(); err != nil {
+		log.Error(err)
+		return
+	}
 }

@@ -32,7 +32,7 @@ func newTCPBridge(ctx context.Context, proxy, bridge net.Conn, proxyFn, bridgeFn
 
 func (b *tcpBridge) pack(buff []byte) []byte {
 	bl := len(buff)
-	prefix := NewUIDByPrefix(options.HTTPNet, bl)
+	prefix, _ := NewBuffWithPrefix(options.HTTPNet, bl)
 	return append(prefix, buff...)
 }
 func (b *tcpBridge) unpack(buff []byte) []byte {

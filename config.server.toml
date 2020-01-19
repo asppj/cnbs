@@ -1,0 +1,8 @@
+serviceName="cnbs server service"
+servicePort=""
+serviceIp=""
+
+[server]
+httpPort=5008
+tcpPort=8000
+udpPort=9000

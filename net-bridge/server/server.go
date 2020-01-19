@@ -9,6 +9,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gogf/gf/frame/g"
+
 	"github.com/gogf/gf/os/glog"
 
 	"github.com/gogf/gf/net/gtcp"
@@ -21,7 +23,8 @@ var _lock sync.Mutex
 
 // Server 网桥服务端
 type Server struct {
-	ip string
+	Name string
+	ip   string
 	// 代理套接字
 	proxyServer *gtcp.Server
 	// 代理端口
@@ -46,11 +49,18 @@ func (s *Server) PrintInfo() {
 }
 
 // NewServer 创建一个服务器
-func NewServer(ip string, pPort, bPort int) *Server {
+func NewServer() *Server {
 	ctx, cancel := context.WithCancel(context.Background())
+	// 读取配置
+	g.Cfg().SetFileName("config.server.toml")
+	serviceName := g.Cfg().GetString("serviceName")
+	ip := g.Cfg().GetString("serviceIp")
+	bPort := g.Cfg().GetInt("servicePort")
+	pPort := g.Cfg().GetInt("httpPort")
 	return &Server{
 		ctx:        ctx,
 		cancel:     cancel,
+		Name:       serviceName,
 		running:    make(chan os.Signal),
 		ip:         ip,
 		proxyPort:  pPort,
@@ -68,10 +78,10 @@ func NewServer(ip string, pPort, bPort int) *Server {
 	}
 }
 
-// Start 启动服务
+// Run 启动服务
 // pPort 代理端口
 // bPort 桥接端口-与client创建隧道
-func (s *Server) Start() (err error) {
+func (s *Server) Run() (err error) {
 	s.proxyServer = gtcp.NewServer(fmt.Sprintf("%s:%d", s.ip, s.proxyPort), s.proxyHTTPHandle)
 	go func() {
 		if err := s.proxyServer.Run(); err != nil {
@@ -91,6 +101,8 @@ func (s *Server) Start() (err error) {
 			}
 		}
 	}()
+	s.PrintInfo()
+	s.Wait()
 	return
 }
 

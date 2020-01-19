@@ -44,6 +44,14 @@ func (b *BalanceHTTP) Balance(c string) (cc *HTTPConn, err error) {
 		return cc, err
 
 	}
+	// TODO 去掉
+	if c == "" {
+		cc = &HTTPConn{
+			Identity:   nil,
+			BridgeConn: nil,
+		}
+		return
+	}
 	err = fmt.Errorf("未找到可供使用的负载")
 	return cc, err
 }

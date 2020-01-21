@@ -2,9 +2,6 @@ package tunnel
 
 import (
 	"context"
-	"io"
-	"io/ioutil"
-	"net"
 	"time"
 
 	"github.com/gogf/gf/net/gtcp"
@@ -37,67 +34,74 @@ func NewBuffWithPrefix(p options.NetType, length int) (buff []byte, uuid string)
 	return buff, string(uid)
 }
 
+// UnpackBuff 解隧道包
+func UnpackBuff(buf []byte) (chatID string, data []byte, ok bool) {
+	if len(buf) < options.PrefixLen {
+		return
+	}
+	chatID = string(buf[:options.PrefixLen])
+	data = buf[options.PrefixLen:]
+	return
+}
+
+// PackBuff 打包隧道数据
+func PackBuff(chatID string, buf []byte) (buff []byte) {
+	buff = make([]byte, options.PrefixLen+len(buf))
+	buff = append(buff, []byte(chatID)...)
+	buff = append(buff, buf...)
+	return
+}
+
 // SetDeadLine 设置超时时间点
 func SetDeadLine(conn *gtcp.Conn) error {
 	return conn.SetDeadline(time.Now().Add(options.DeadLine))
 
 }
 
-// readAll 读取所有
-func readAll(conn net.Conn) (buff []byte, err error) {
-	return ioutil.ReadAll(conn)
-}
-
-func exchangePair(proxy net.Conn, bridge net.Conn) (err error) {
-	return
-}
-
-func authHTTPBridge(conn io.Reader) (key string, err error) {
-	// buff := make([]byte, 24)
-	// n, err := conn.Read(buff)
-	// if err != nil {
-	// 	return
-	// }
-	return
-}
-
-// ReadHTTP 读取http
-func ReadHTTP(ctx context.Context, proxy *gtcp.Conn, bridge *gtcp.Conn) (recvByte, sendByte int, err error) {
+// ProxyHTTP 读取http
+func ProxyHTTP(ctx context.Context, proxy *gtcp.Conn, bridge *gtcp.Conn) (recvByte, sendByte int, err error) {
 	ticker := time.NewTicker(options.TimeOut)
-	// 分片转发-request
-	chatID, n, err := exchangeRequest(ctx, proxy, bridge, ticker)
+	// 分片转发-request-不阻塞
+	chatID, err := exchangeRequest(ctx, proxy, bridge, ticker, recvByte)
 	if err != nil {
 		return
 	}
-	recvByte += n
-	// 分片转发-response
-	n, err = exchangeResponse(ctx, chatID, bridge, proxy, ticker)
-	if err != nil {
-		return
-	}
-	sendByte += n
+	// 阻塞
+	sendByte = exchangeResponse(proxy, bridge, chatID)
 	return
 }
 
-func exchangeRequest(ctx context.Context, src *gtcp.Conn, dst *gtcp.Conn, ticker *time.Ticker) (chatID string, n int, err error) {
-	buf, chatID := NewBuffWithPrefix(options.HTTPNet, options.BuffSize)
-	ch := make(chan [][]byte)
-	ch = ReadConn(ctx, src, buf, ch, ticker)
-	// 分片转发-request
-	for _, res := range <-ch {
-		buf = append(buf, res...)
-		err = dst.Send(buf)
+func exchangeResponse(proxy *gtcp.Conn, bridge *gtcp.Conn, chatID string) (sendB int) {
+	// 保存chatID 设置回显通道
+	chatCh := make(chan [][]byte)
+	SetChat(bridge, chatID, chatCh)
+	for _, buf := range <-chatCh {
+		n, err := proxy.Write(buf)
 		if err != nil {
 			return
 		}
-		n += len(buf)
-		buf = buf[:0]
+		sendB += n
 	}
+	DeleteChat(bridge, chatID)
+	return
+}
+
+// 不阻塞读取
+func exchangeRequest(ctx context.Context, src *gtcp.Conn, dst *gtcp.Conn, ticker *time.Ticker, recvB int) (chatID string, err error) {
+	buf, chatID := NewBuffWithPrefix(options.HTTPNet, options.BuffSize)
+	ch := ReadConn(ctx, src, buf, ticker)
+	// 分片转发-request
+	go func() {
+		if err := WriteConn(dst, ch, recvB); err != nil {
+			log.Error(err)
+		}
+	}()
 	return
 }
 
 // ReadConn 读取
-func ReadConn(ctx context.Context, src *gtcp.Conn, buf []byte, ch chan [][]byte, ticker *time.Ticker) chan [][]byte {
+func ReadConn(ctx context.Context, src *gtcp.Conn, buf []byte, ticker *time.Ticker) chan [][]byte {
+	ch := make(chan [][]byte)
 	rFn := func() error {
 		recv, err := src.Read(buf)
 		if err != nil {
@@ -111,7 +115,7 @@ func ReadConn(ctx context.Context, src *gtcp.Conn, buf []byte, ch chan [][]byte,
 		ch <- [][]byte{buf[:recv]}
 		return nil
 	}
-	go func() {
+	rLoop := func() {
 		// 读取完毕关闭通道
 		defer close(ch)
 		for {
@@ -128,58 +132,26 @@ func ReadConn(ctx context.Context, src *gtcp.Conn, buf []byte, ch chan [][]byte,
 				}
 			}
 		}
-	}()
+	}
+	go rLoop()
 	return ch
 }
 
-func exchangeResponse(ctx context.Context, chatID string, src *gtcp.Conn, dst *gtcp.Conn, ticker *time.Ticker) (n int, err error) {
-	buf := make([]byte, options.ReadSize)
-	ch := make(chan [][]byte)
-
-	rFn := func() error {
-		recv, err := src.Read(buf)
+// WriteConn 不带超时，read关闭则关闭
+func WriteConn(conn *gtcp.Conn, ch chan [][]byte, sendB int) (err error) {
+	wLoop := func(buf []byte) error {
+		n, wErr := conn.Write(buf)
 		if err != nil {
-			return err
+			return wErr
 		}
-		// 重新定义超时时间
-		err = SetDeadLine(src)
-		if err != nil {
-			return err
-		}
-		ch <- [][]byte{buf[:recv]}
+		sendB += n
 		return nil
 	}
-	go func() {
-		// 读取完毕关闭通道
-		defer close(ch)
-		for {
-			select {
-			case <-ticker.C: // 整体超时
-				return
-			case <-ctx.Done(): // 主动取消
-				return
-			default:
-				err := rFn()
-				if err != nil {
-					log.Error(err) // 单次超时或其他错误 TODO io.EOF不应该打印
-					return
-				}
-			}
-		}
-	}()
-	// 分片转发-request
-	for _, res := range <-ch {
-		buf = append(buf, res...)
-		err = dst.Send(buf)
-		if err != nil {
+
+	for _, buf := range <-ch {
+		if err = wLoop(buf); err != nil {
 			return
 		}
-		n += len(buf)
-		buf = buf[:0]
 	}
 	return
-}
-
-func readResponse(ctx context.Context, bridge *gtcp.Conn, ticker time.Ticker) error {
-	return nil
 }

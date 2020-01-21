@@ -1,9 +1,13 @@
 package server
 
 import (
+	"context"
+	"time"
+
 	"github.com/asppj/cnbs/log"
 	"github.com/asppj/cnbs/net-bridge/auth"
 	"github.com/asppj/cnbs/net-bridge/options"
+	"github.com/asppj/cnbs/net-bridge/tunnel"
 	"github.com/gogf/gf/net/gtcp"
 )
 
@@ -37,6 +41,7 @@ func (s *Server) bridgeHandle(conn *gtcp.Conn) {
 						log.Error("http添加失败", err)
 						return
 					}
+					go httpBridgeHandle(s.ctx, conn)
 				}
 			case options.TCPNet:
 				{
@@ -64,4 +69,25 @@ func (s *Server) bridgeHandle(conn *gtcp.Conn) {
 		loop()
 		s.PrintInfo()
 	}
+}
+
+// http 隧道监听
+func httpBridgeHandle(ctx context.Context, conn *gtcp.Conn) {
+	buf := make([]byte, options.ReadSize)
+	ticker := time.NewTicker(time.Hour * 24)
+	loop := func() {
+		bCh := tunnel.ReadConn(ctx, conn, buf, ticker)
+		for _, buf := range <-bCh {
+			if chatID, data, ok := tunnel.UnpackBuff(buf); ok {
+				pCh := tunnel.GetChat(conn, chatID)
+				if pCh != nil {
+					pCh <- [][]byte{data}
+				} else {
+					log.Warn("代理端口请求提前关闭-httpBridgeHandle")
+				}
+			}
+		}
+	}
+	go loop()
+	return
 }

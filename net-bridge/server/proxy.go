@@ -28,7 +28,7 @@ func (s *Server) proxyHTTPHandle(conn *gtcp.Conn) {
 		log.Error("没有可用的隧道")
 		return
 	}
-	recv, send, err := tunnel.ReadHTTP(s.ctx, conn, bs.BridgeConn)
+	recv, send, err := tunnel.ProxyHTTP(s.ctx, conn, bs.BridgeConn)
 	if err != nil {
 		log.Error(err)
 		return

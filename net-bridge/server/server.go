@@ -56,7 +56,7 @@ func NewServer() *Server {
 	serviceName := g.Cfg().GetString("serviceName")
 	ip := g.Cfg().GetString("serviceIp")
 	bPort := g.Cfg().GetInt("servicePort")
-	pPort := g.Cfg().GetInt("httpPort")
+	pPort := g.Cfg().GetInt("server.httpPort")
 	return &Server{
 		ctx:        ctx,
 		cancel:     cancel,

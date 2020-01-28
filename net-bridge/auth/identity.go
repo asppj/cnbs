@@ -43,3 +43,21 @@ func (i *Identity) string() string {
 	return fmt.Sprintf("[ AuthKey：%s ] [ UserName：%s ] [ ProxyPort：%d ] [ HTTPPort：%d ]\n\t[StartTime:%s] [running:%vHour]",
 		i.AuthKey, i.UserName, i.ProxyPort, i.HTTPPort, i.StartTime.String(), time.Since(i.StartTime).Hours())
 }
+
+// NewIdentity 身份
+func NewIdentity() *Identity {
+	return &Identity{
+		NetType:   []options.NetType{options.HTTPNet},
+		AuthKey:   "123456kegel",
+		HTTPPort:  80,
+		HTTPSPort: 443,
+		TCPPort:   8000,
+		UDPPort:   8001,
+		SSHPort:   22,
+		VNCPort:   43,
+		ProxyPort: 808,
+		UserName:  "kegel",
+		PassWord:  "lsp",
+		StartTime: time.Time{},
+	}
+}

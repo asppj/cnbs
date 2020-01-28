@@ -1,6 +1,6 @@
 serviceName="cnbs server service"
-servicePort=""
-serviceIp=""
+servicePort="5009"
+serviceIp="localhost"
 
 [server]
 httpPort=5008

@@ -2,7 +2,8 @@ package client
 
 import (
 	"context"
-	"time"
+
+	"github.com/asppj/cnbs/log"
 
 	"github.com/asppj/cnbs/net-bridge/options"
 	"github.com/asppj/cnbs/net-bridge/tunnel"
@@ -10,18 +11,23 @@ import (
 	"github.com/gogf/gf/net/gtcp"
 )
 
-func readHTTP(ctx context.Context, src *gtcp.Conn, ticker *time.Ticker) {
+func monitorHTTPTunnel(ctx context.Context, src *gtcp.Conn) {
 	defer func() {
 		_ = src.Close()
 	}()
-	recvCh := make(chan [][]byte)
+	ticker := options.NewTickerSecond()
+	defer ticker.Stop()
 	buff := make([]byte, options.BuffSize)
-	recvCh = tunnel.ReadConn(ctx, src, buff, recvCh, ticker)
+	recvCh := tunnel.ReadConn(ctx, src, buff, ticker)
+
 	fn := func() {
 		for _, buf := range <-recvCh {
 			// TODO 转发
 			print(buf)
-
+			err := src.SendPkg(buf)
+			if err != nil {
+				log.Info("转发：", n)
+			}
 		}
 	}
 	go func() {
@@ -36,5 +42,5 @@ func readHTTP(ctx context.Context, src *gtcp.Conn, ticker *time.Ticker) {
 			}
 		}
 	}()
-	return nil
+	return
 }

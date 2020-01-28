@@ -1,6 +1,8 @@
 package main
 
 import (
+	"flag"
+
 	"github.com/asppj/cnbs/log"
 	"github.com/asppj/cnbs/net-bridge/client"
 
@@ -20,11 +22,22 @@ func newServer() {
 		return
 	}
 }
-
-func main() {
+func newClient() {
 	c := client.NewClient()
 	if err := c.Run(); err != nil {
 		log.Error(err)
 		return
 	}
+}
+func main() {
+	model := flag.String("m", "server", "go  run main.go -m client/server")
+	flag.Parse()
+	flag.PrintDefaults()
+	log.Info("运行模式:", model)
+	if *model == "client" {
+		newClient()
+	} else {
+		newServer()
+	}
+
 }

@@ -14,8 +14,8 @@ const (
 	HTTPSNet
 
 	// TCPNet TCP代理
-
 	TCPNet
+	// UDPNet UDP代理
 	UDPNet
 	// kcpNet
 	// sshNet

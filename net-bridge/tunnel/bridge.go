@@ -5,8 +5,6 @@ import (
 	"net"
 
 	"github.com/asppj/cnbs/net-bridge/options"
-
-	"github.com/asppj/cnbs/log"
 )
 
 type tcpBridge struct {
@@ -41,29 +39,29 @@ func (b *tcpBridge) unpack(buff []byte) []byte {
 
 // OnceRequest 代理一次请求
 func (b *tcpBridge) OnceRequest() (err error) {
-	buf, err := readAll(b.proxy)
-	if err != nil {
-		log.Error("接收http代理request失败")
-		return
-	}
-
-	n, err := b.bridge.Write(b.pack(buf))
-	if err != nil {
-		log.Error("发送http代理request失败")
-		return
-	}
-	b.proxyFn(int64(n))
-	buf, err = readAll(b.bridge)
-	if err != nil {
-		log.Error("接受http代理Response失败")
-		return
-	}
-	n, err = b.proxy.Write(b.unpack(buf))
-	if err != nil {
-		log.Error("发送http代理Response失败")
-		return
-	}
-	b.bridgeFn(int64(n))
+	// buf, err := readAll(b.proxy)
+	// if err != nil {
+	// 	log.Error("接收http代理request失败")
+	// 	return
+	// }
+	//
+	// n, err := b.bridge.Write(b.pack(buf))
+	// if err != nil {
+	// 	log.Error("发送http代理request失败")
+	// 	return
+	// }
+	// b.proxyFn(int64(n))
+	// buf, err = readAll(b.bridge)
+	// if err != nil {
+	// 	log.Error("接受http代理Response失败")
+	// 	return
+	// }
+	// n, err = b.proxy.Write(b.unpack(buf))
+	// if err != nil {
+	// 	log.Error("发送http代理Response失败")
+	// 	return
+	// }
+	// b.bridgeFn(int64(n))
 	return
 }
 

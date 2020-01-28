@@ -56,7 +56,7 @@ func NewServer() *Server {
 	serviceName := g.Cfg().GetString("serviceName")
 	ip := g.Cfg().GetString("serviceIp")
 	bPort := g.Cfg().GetInt("servicePort")
-	pPort := g.Cfg().GetInt("httpPort")
+	pPort := g.Cfg().GetInt("server.httpPort")
 	return &Server{
 		ctx:        ctx,
 		cancel:     cancel,
@@ -131,15 +131,17 @@ func (s *Server) Wait() {
 	signal.Notify(s.running, os.Interrupt, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT)
 	pTick := time.NewTicker(120 * time.Second)
 	defer pTick.Stop()
-loop:
-	for {
-		select {
-		case r := <-s.running:
-			log.InfoF("正在服务关闭...:%+v。", r)
-			break loop
-		case <-pTick.C:
-			s.PrintInfo()
+	loop := func() {
+		for {
+			select {
+			case r := <-s.running:
+				log.InfoF("正在服务关闭...:%+v。", r)
+				return
+			case <-pTick.C:
+				s.PrintInfo()
+			}
 		}
 	}
+	loop()
 	s.Stop()
 }

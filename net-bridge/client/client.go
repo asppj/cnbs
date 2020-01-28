@@ -2,10 +2,13 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/asppj/cnbs/net-bridge/auth"
 
 	"github.com/asppj/cnbs/net-bridge/options"
 
@@ -28,6 +31,7 @@ type Client struct {
 	ctx            context.Context
 	cancel         context.CancelFunc
 	Name           string
+	heartTicker    *time.Ticker // 心跳
 }
 
 // NewClient 客户端
@@ -51,6 +55,7 @@ func NewClient() *Client {
 		localUDPPort:  localUDPConn,
 		ctx:           ctx,
 		cancel:        cancel,
+		heartTicker:   options.NewTickerHeart(),
 	}
 }
 
@@ -61,7 +66,12 @@ func (c *Client) Run() error {
 		return err
 	}
 	c.remoteHTTPConn = conn
-	readHTTP(c.ctx, conn)
+	// todo 临时写在这
+	if err = login(c.ctx, conn); err != nil {
+		log.Error("login失败：", err)
+		return err
+	}
+	monitorHTTPTunnel(c.ctx, conn)
 	c.Wait()
 	return nil
 }
@@ -90,6 +100,8 @@ func (c *Client) Stop() {
 			log.InfoF("关闭代理端口%d成功", c.localUDPPort)
 		}
 	}
+	// 关闭心跳
+	c.heartTicker.Stop()
 }
 
 // Wait 阻塞等待关闭
@@ -115,4 +127,18 @@ loop:
 func (c *Client) PrintInfo() {
 	log.InfoF("Server Host:%s\n\t httpPort:%d\n\ttcpPort:%d\n\t udpPort:%d",
 		c.host, c.localHTTPPort, c.localTCPPort, c.localUDPPort)
+}
+
+func login(ctx context.Context, conn *gtcp.Conn) error {
+	buf, err := json.Marshal(auth.NewIdentity())
+	if err != nil {
+		return err
+	}
+	resp, err := conn.SendRecvPkg(buf)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	log.Info(string(resp))
+	return nil
 }

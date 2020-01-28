@@ -41,7 +41,7 @@ func (s *Server) bridgeHandle(conn *gtcp.Conn) {
 						log.Error("http添加失败", err)
 						return
 					}
-					go httpBridgeHandle(s.ctx, conn)
+					httpBridgeHandle(s.ctx, conn)
 				}
 			case options.TCPNet:
 				{
@@ -73,6 +73,7 @@ func (s *Server) bridgeHandle(conn *gtcp.Conn) {
 
 // http 隧道监听
 func httpBridgeHandle(ctx context.Context, conn *gtcp.Conn) {
+	log.Info("启动隧道监听。。。")
 	buf := make([]byte, options.ReadSize)
 	ticker := time.NewTicker(time.Hour * 24)
 	loop := func() {
@@ -89,5 +90,6 @@ func httpBridgeHandle(ctx context.Context, conn *gtcp.Conn) {
 		}
 	}
 	go loop()
+	log.Info("http隧道监听成功")
 	return
 }

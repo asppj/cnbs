@@ -91,5 +91,4 @@ func httpBridgeHandle(ctx context.Context, conn *gtcp.Conn) {
 	}
 	go loop()
 	log.Info("http隧道监听成功")
-	return
 }

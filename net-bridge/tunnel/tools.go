@@ -1,10 +1,8 @@
-package bridge
+package tunnel
 
 import (
 	"context"
 	"time"
-
-	"github.com/asppj/cnbs/net-bridge/tunnel"
 
 	"github.com/gogf/gf/net/gtcp"
 
@@ -75,22 +73,36 @@ func ProxyHTTP(ctx context.Context, proxy *gtcp.Conn, bridge *gtcp.Conn) (recvBy
 
 func exchangeResponse(proxy *gtcp.Conn, bridge *gtcp.Conn, chatID string) (sendB int) {
 	// 保存chatID 设置回显通道
-	chatCh := make(chan [][]byte)
-	tunnel.SetChat(bridge, chatID, chatCh)
-	for _, buf := range <-chatCh {
+	chatCh := options.NewBuffGIterator()
+	// 所有请求共有 不写在这
+	// loop := func() {
+	// 	defer close(chatCh)
+	// 	for {
+	// 		buf, err := bridge.RecvPkg()
+	// 		if err != nil {
+	// 			return
+	// 		}
+	// 		chatCh <- buf
+	// 	}
+	// }
+	// go loop()
+	SetChat(bridge, chatID, chatCh)
+	for buf := range chatCh {
 		n, err := proxy.Write(buf)
 		if err != nil {
 			return
 		}
 		sendB += n
 	}
-	tunnel.DeleteChat(bridge, chatID)
+	DeleteChat(bridge, chatID)
 	return
 }
 
 // 不阻塞读取
 func exchangeRequest(ctx context.Context, src *gtcp.Conn, dst *gtcp.Conn, ticker *time.Ticker, recvB int) (chatID string, err error) {
-	buf, chatID := NewBuffWithPrefix(options.HTTPNet, options.BuffSize)
+	uid := NewUID()
+	buf := options.NewBuffWithPrefix(options.HTTPNet, uid)
+	chatID = string(uid)
 	ch := ReadConn(ctx, src, buf, ticker)
 	// 分片转发-request
 	go func() {
@@ -102,10 +114,10 @@ func exchangeRequest(ctx context.Context, src *gtcp.Conn, dst *gtcp.Conn, ticker
 }
 
 // ReadConn 读取
-func ReadConn(ctx context.Context, src *gtcp.Conn, buf []byte, ticker *time.Ticker) chan [][]byte {
-	ch := make(chan [][]byte)
+func ReadConn(ctx context.Context, src *gtcp.Conn, buf []byte, ticker *time.Ticker) options.BuffIterator {
+	ch := options.NewBuffGIterator()
 	rFn := func() error {
-		recv, err := src.Read(buf)
+		recv, err := src.Read(buf[options.PrefixLen:])
 		if err != nil {
 			return err
 		}
@@ -114,7 +126,7 @@ func ReadConn(ctx context.Context, src *gtcp.Conn, buf []byte, ticker *time.Tick
 		if err != nil {
 			return err
 		}
-		ch <- [][]byte{buf[:recv]}
+		ch <- buf[:recv+options.PrefixLen]
 		return nil
 	}
 	rLoop := func() {
@@ -140,17 +152,17 @@ func ReadConn(ctx context.Context, src *gtcp.Conn, buf []byte, ticker *time.Tick
 }
 
 // WriteConn 不带超时，read关闭则关闭
-func WriteConn(conn *gtcp.Conn, ch chan [][]byte, sendB int) (err error) {
+func WriteConn(conn *gtcp.Conn, ch options.BuffIterator, sendB int) (err error) {
 	wLoop := func(buf []byte) error {
-		n, wErr := conn.Write(buf)
+		wErr := conn.SendPkg(buf)
 		if err != nil {
 			return wErr
 		}
-		sendB += n
+		sendB += len(buf)
 		return nil
 	}
 
-	for _, buf := range <-ch {
+	for buf := range ch {
 		if err = wLoop(buf); err != nil {
 			return
 		}

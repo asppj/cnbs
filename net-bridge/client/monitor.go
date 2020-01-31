@@ -3,7 +3,7 @@ package client
 import (
 	"context"
 
-	"github.com/asppj/cnbs/net-bridge/bridge"
+	"github.com/asppj/cnbs/net-bridge/tunnel"
 
 	"github.com/asppj/cnbs/log"
 
@@ -17,13 +17,14 @@ func monitorHTTPTunnel(ctx context.Context, src *gtcp.Conn) {
 	}()
 	ticker := options.NewTickerSecond()
 	defer ticker.Stop()
-	buff := make([]byte, options.BuffSize)
-	recvCh := bridge.ReadConn(ctx, src, buff, ticker)
+	uid := tunnel.NewUID()
+	buff := options.NewBuffWithPrefix(options.HTTPNet, uid)
+	recvCh := tunnel.ReadConn(ctx, src, buff, ticker)
 
 	fn := func() {
-		for _, buf := range <-recvCh {
+		for buf := range recvCh {
 			// TODO 转发
-			print(buf)
+			print(string(buf))
 			err := src.SendPkg(buf)
 			if err != nil {
 				log.Info("转发：")

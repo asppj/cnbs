@@ -3,18 +3,20 @@ package tunnel
 import (
 	"sync"
 
+	"github.com/asppj/cnbs/net-bridge/options"
+
 	"github.com/gogf/gf/net/gtcp"
 )
 
 var globalChatIDMap = newGlobalBridgeRoom() // 保存会话映射关系
 
 // SetChat 保存临时通信channel
-func SetChat(conn *gtcp.Conn, chatID string, ch chan [][]byte) {
+func SetChat(conn *gtcp.Conn, chatID string, ch options.BuffIterator) {
 	globalChatIDMap.setChat(conn, chatID, ch)
 }
 
 // GetChat 获取通信channel
-func GetChat(conn *gtcp.Conn, chatID string) chan [][]byte {
+func GetChat(conn *gtcp.Conn, chatID string) options.BuffIterator {
 	return globalChatIDMap.getChat(conn, chatID)
 }
 
@@ -41,7 +43,7 @@ func newGlobalBridgeRoom() *globalBridgeRoom {
 	}
 }
 
-func (g *globalBridgeRoom) setChat(conn *gtcp.Conn, chatID string, ch chan [][]byte) {
+func (g *globalBridgeRoom) setChat(conn *gtcp.Conn, chatID string, ch options.BuffIterator) {
 	g.Lock()
 	defer g.Unlock()
 	if room, ok := g.Chats[conn]; ok {
@@ -52,7 +54,7 @@ func (g *globalBridgeRoom) setChat(conn *gtcp.Conn, chatID string, ch chan [][]b
 		g.Chats[conn] = bc
 	}
 }
-func (g *globalBridgeRoom) getChat(conn *gtcp.Conn, chatID string) chan [][]byte {
+func (g *globalBridgeRoom) getChat(conn *gtcp.Conn, chatID string) options.BuffIterator {
 	g.Lock()
 	defer g.Unlock()
 	if room, ok := g.Chats[conn]; ok {
@@ -76,23 +78,23 @@ func (g *globalBridgeRoom) deleteConn(conn *gtcp.Conn) {
 
 type bridgeChat struct {
 	sync.RWMutex
-	Chs map[string]chan [][]byte
+	Chs map[string]options.BuffIterator
 }
 
 func newBridgeChat() *bridgeChat {
-	chs := make(map[string]chan [][]byte)
+	chs := make(map[string]options.BuffIterator)
 	return &bridgeChat{
 		RWMutex: sync.RWMutex{},
 		Chs:     chs,
 	}
 }
-func (b *bridgeChat) setChat(chatID string, ch chan [][]byte) {
+func (b *bridgeChat) setChat(chatID string, ch options.BuffIterator) {
 	b.Lock()
 	defer b.Unlock()
 	b.Chs[chatID] = ch
 }
 
-func (b *bridgeChat) getChat(chatID string) (ch chan [][]byte) {
+func (b *bridgeChat) getChat(chatID string) (ch options.BuffIterator) {
 	b.Lock()
 	defer b.Unlock()
 	if ch, ok := b.Chs[chatID]; ok {

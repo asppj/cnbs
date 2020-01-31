@@ -4,12 +4,12 @@ import (
 	"context"
 	"time"
 
-	"github.com/asppj/cnbs/net-bridge/bridge"
+	"github.com/asppj/cnbs/net-bridge/tunnel"
+	"github.com/gogf/gf/os/glog"
 
 	"github.com/asppj/cnbs/log"
 	"github.com/asppj/cnbs/net-bridge/auth"
 	"github.com/asppj/cnbs/net-bridge/options"
-	"github.com/asppj/cnbs/net-bridge/tunnel"
 	"github.com/gogf/gf/net/gtcp"
 )
 
@@ -76,18 +76,29 @@ func (s *Server) bridgeHandle(conn *gtcp.Conn) {
 // http 隧道监听
 func httpBridgeHandle(ctx context.Context, conn *gtcp.Conn) {
 	log.Info("启动隧道监听。。。")
-	buf := make([]byte, options.ReadSize)
 	ticker := time.NewTicker(time.Hour * 24)
+	rFn := func() {
+		buf, err := conn.RecvPkg()
+		if err != nil {
+			return
+		}
+		chatID, data, ok := tunnel.UnpackBuff(buf)
+		if ok {
+			ch := tunnel.GetChat(conn, chatID)
+			ch <- data
+		} else {
+			glog.Warning("无效数据", string(buf))
+		}
+	}
 	loop := func() {
-		bCh := bridge.ReadConn(ctx, conn, buf, ticker)
-		for _, buf := range <-bCh {
-			if chatID, data, ok := bridge.UnpackBuff(buf); ok {
-				pCh := tunnel.GetChat(conn, chatID)
-				if pCh != nil {
-					pCh <- [][]byte{data}
-				} else {
-					log.Warn("代理端口请求提前关闭-httpBridgeHandle")
-				}
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				return
+			default:
+				rFn()
 			}
 		}
 	}

@@ -3,7 +3,7 @@ package server
 import (
 	"io"
 
-	"github.com/asppj/cnbs/net-bridge/bridge"
+	"github.com/asppj/cnbs/net-bridge/tunnel"
 
 	"github.com/asppj/cnbs/log"
 	"github.com/gogf/gf/net/gtcp"
@@ -11,7 +11,7 @@ import (
 
 // 读取代理端口请求
 func (s *Server) proxyHTTPHandle(conn *gtcp.Conn) {
-	err := bridge.SetDeadLine(conn)
+	err := tunnel.SetDeadLine(conn)
 	if err != nil {
 		log.Error("设置超时时间失败")
 		return
@@ -29,7 +29,7 @@ func (s *Server) proxyHTTPHandle(conn *gtcp.Conn) {
 		log.Error("没有可用的隧道")
 		return
 	}
-	recv, send, err := bridge.ProxyHTTP(s.ctx, conn, bs.BridgeConn)
+	recv, send, err := tunnel.ProxyHTTP(s.ctx, conn, bs.BridgeConn)
 	if err != nil {
 		log.Error(err)
 		return

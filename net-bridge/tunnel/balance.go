@@ -56,7 +56,7 @@ func (b *BalanceHTTP) Balance(c string) (cc *HTTPConn, err error) {
 	return cc, err
 }
 
-// Write 转发请求
+// Send 转发请求
 func (b *BalanceHTTP) Write(c string, buf []byte) (bs *HTTPConn, n int, err error) {
 	bs, err = b.Balance(c)
 	if err != nil {

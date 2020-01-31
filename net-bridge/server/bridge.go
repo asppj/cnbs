@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/asppj/cnbs/net-bridge/bridge"
+
 	"github.com/asppj/cnbs/log"
 	"github.com/asppj/cnbs/net-bridge/auth"
 	"github.com/asppj/cnbs/net-bridge/options"
@@ -77,9 +79,9 @@ func httpBridgeHandle(ctx context.Context, conn *gtcp.Conn) {
 	buf := make([]byte, options.ReadSize)
 	ticker := time.NewTicker(time.Hour * 24)
 	loop := func() {
-		bCh := tunnel.ReadConn(ctx, conn, buf, ticker)
+		bCh := bridge.ReadConn(ctx, conn, buf, ticker)
 		for _, buf := range <-bCh {
-			if chatID, data, ok := tunnel.UnpackBuff(buf); ok {
+			if chatID, data, ok := bridge.UnpackBuff(buf); ok {
 				pCh := tunnel.GetChat(conn, chatID)
 				if pCh != nil {
 					pCh <- [][]byte{data}

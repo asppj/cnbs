@@ -3,11 +3,11 @@ package client
 import (
 	"context"
 
+	"github.com/asppj/cnbs/net-bridge/bridge"
+
 	"github.com/asppj/cnbs/log"
 
 	"github.com/asppj/cnbs/net-bridge/options"
-	"github.com/asppj/cnbs/net-bridge/tunnel"
-
 	"github.com/gogf/gf/net/gtcp"
 )
 
@@ -18,7 +18,7 @@ func monitorHTTPTunnel(ctx context.Context, src *gtcp.Conn) {
 	ticker := options.NewTickerSecond()
 	defer ticker.Stop()
 	buff := make([]byte, options.BuffSize)
-	recvCh := tunnel.ReadConn(ctx, src, buff, ticker)
+	recvCh := bridge.ReadConn(ctx, src, buff, ticker)
 
 	fn := func() {
 		for _, buf := range <-recvCh {

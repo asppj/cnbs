@@ -4,6 +4,8 @@ import (
 	"context"
 	"net"
 
+	"github.com/asppj/cnbs/net-bridge/bridge"
+
 	"github.com/asppj/cnbs/net-bridge/options"
 )
 
@@ -30,7 +32,7 @@ func newTCPBridge(ctx context.Context, proxy, bridge net.Conn, proxyFn, bridgeFn
 
 func (b *tcpBridge) pack(buff []byte) []byte {
 	bl := len(buff)
-	prefix, _ := NewBuffWithPrefix(options.HTTPNet, bl)
+	prefix, _ := bridge.NewBuffWithPrefix(options.HTTPNet, bl)
 	return append(prefix, buff...)
 }
 func (b *tcpBridge) unpack(buff []byte) []byte {
@@ -45,7 +47,7 @@ func (b *tcpBridge) OnceRequest() (err error) {
 	// 	return
 	// }
 	//
-	// n, err := b.bridge.Write(b.pack(buf))
+	// n, err := b.bridge.Send(b.pack(buf))
 	// if err != nil {
 	// 	log.Error("发送http代理request失败")
 	// 	return
@@ -56,7 +58,7 @@ func (b *tcpBridge) OnceRequest() (err error) {
 	// 	log.Error("接受http代理Response失败")
 	// 	return
 	// }
-	// n, err = b.proxy.Write(b.unpack(buf))
+	// n, err = b.proxy.Send(b.unpack(buf))
 	// if err != nil {
 	// 	log.Error("发送http代理Response失败")
 	// 	return

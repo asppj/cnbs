@@ -1,8 +1,10 @@
-package tunnel
+package bridge
 
 import (
 	"context"
 	"time"
+
+	"github.com/asppj/cnbs/net-bridge/tunnel"
 
 	"github.com/gogf/gf/net/gtcp"
 
@@ -74,7 +76,7 @@ func ProxyHTTP(ctx context.Context, proxy *gtcp.Conn, bridge *gtcp.Conn) (recvBy
 func exchangeResponse(proxy *gtcp.Conn, bridge *gtcp.Conn, chatID string) (sendB int) {
 	// 保存chatID 设置回显通道
 	chatCh := make(chan [][]byte)
-	SetChat(bridge, chatID, chatCh)
+	tunnel.SetChat(bridge, chatID, chatCh)
 	for _, buf := range <-chatCh {
 		n, err := proxy.Write(buf)
 		if err != nil {
@@ -82,7 +84,7 @@ func exchangeResponse(proxy *gtcp.Conn, bridge *gtcp.Conn, chatID string) (sendB
 		}
 		sendB += n
 	}
-	DeleteChat(bridge, chatID)
+	tunnel.DeleteChat(bridge, chatID)
 	return
 }
 
